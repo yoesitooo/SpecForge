@@ -1,0 +1,101 @@
+# =============================================================================
+# SDD ECOSYSTEM — .gitignore
+# Lo que se sube: código fuente, skills, docs, config de ejemplo.
+# Lo que NO se sube: secretos, datos, binarios, output generado.
+# =============================================================================
+
+
+# ── SECRETOS Y CLAVES (NUNCA subir) ──────────────────────────────────────────
+.env
+.env.local
+.env.production
+*.key
+*.pem
+secrets/
+credentials.json
+
+
+# ── BASES DE DATOS Y MEMORIA (datos personales) ───────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+memory/engram.db
+memory/engram_export.json
+memory/orchestrator_state.json
+
+
+# ── OUTPUT GENERADO ───────────────────────────────────────────────────────────
+workspaces/          # Proyectos generados por los agentes
+Documents/Jarvis/    # Documentos creados por Jarvis
+static/screenshots/
+*.mp3                # Audio TTS temporal
+
+
+# ── PYTHON ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+env/
+pip-wheel-metadata/
+*.whl
+
+
+# ── NODE / NEXT.JS ────────────────────────────────────────────────────────────
+node_modules/
+.next/
+out/
+npm-debug.log*
+yarn-debug.log*
+package-lock.json
+yarn.lock
+.pnpm-debug.log*
+
+
+# ── EDITORES Y SISTEMA OPERATIVO ─────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/settings.json    # Sí subir extensions.json y launch.json
+.idea/
+*.swp
+*.bak
+*.tmp
+.openclaw/
+
+
+# ── DOCKER (infraestructura local, no relevante para el repo) ─────────────────
+# Nota: SÍ subimos docker-compose.yml y Dockerfiles como documentación
+ollama_data/
+.docker/
+*.log
+
+
+# ── LEGACY (archivos viejos del repo anterior) ────────────────────────────────
+AgentHub/memory/
+AgentHub/config/
+AgentHub/workspaces/
+AgentHub/backups/
+AgentHub/logs/
+
+
+# ── WHITELIST EXPLÍCITA (forzar inclusión aunque el directorio esté excluido) ──
+!.env.example
+!memory/*.py           # Código Python sí, archivos .db no
+!skills/**/*.md
+!skills/**/*.py
+!CLAUDE.md
+!README.md
+!requirements.txt
+!docker-compose*.yml
+!Dockerfile*
+
+# ── NOTAS PERSONALES / MEMORIA DIARIA ─────────────────────────────────────────
+MEMORY.md
+memory/*.md

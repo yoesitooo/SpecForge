@@ -1,0 +1,44 @@
+services:
+
+  # ── SDD Orchestrator HTTP API ─────────────────────────────────────────────
+  # El orquestador existente expuesto sobre HTTP para que OpenClaw lo consuma.
+  # NO reemplaza el bot de Telegram — corre en paralelo.
+  sdd-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    ports:
+      - "8000:8000"
+    env_file: .env
+    environment:
+      TRANSPORT_MODE: http       # solo HTTP, sin Telegram ni CLI
+      HTTP_PORT: "8000"
+    volumes:
+      - ./memory:/app/memory     # DB compartida con el bot de Telegram
+      - ./workspaces:/app/workspaces
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # ── OpenClaw Gateway + Dashboard ─────────────────────────────────────────
+  openclaw:
+    image: ghcr.io/openclaw/openclaw:latest
+    ports:
+      - "18789:18789"        # WebSocket + Web UI (abrir en browser)
+    volumes:
+      - ./openclaw/openclaw.json:/root/.openclaw/openclaw.json:ro
+      - openclaw-data:/root/.openclaw/data
+    environment:
+      # OpenClaw puede hablar con Groq directamente si querés usarlo como
+      # gateway de LLM adicional (independiente del SDD orchestrator)
+      GROQ_API_KEY: ${GROQ_API_KEY}
+    depends_on:
+      sdd-api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  openclaw-data:

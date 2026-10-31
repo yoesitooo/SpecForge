@@ -1,0 +1,23 @@
+{
+  "models": {
+    "providers": {
+      "sdd": {
+        "baseUrl": "http://host.docker.internal:8000/v1",
+        "api": "openai-completions",
+        "models": [
+          {
+            "id": "sdd-orchestrator",
+            "label": "SDD Orchestrator (Un Laps)",
+            "description": "Multi-agent software development system. 11 agents, 7 phases. Commands: /new <project>, /go, /status, /rollback <phase>, /auto, /stop, /spec"
+          }
+        ]
+      }
+    },
+    "default": "sdd/sdd-orchestrator"
+  },
+  "agents": {
+    "defaults": {
+      "model": "sdd/sdd-orchestrator"
+    }
+  }
+}
