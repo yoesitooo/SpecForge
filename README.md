@@ -94,6 +94,34 @@ No hace falta pagar nada para usarlo: **basta con una clave gratis** (recomendad
 
 **Sobre la cuenta de Google AI Pro:** la suscripción **no** aumenta los límites de la API de Gemini (eso va por Google AI Studio), pero sí da límites más altos en el CLI de Google. Desde junio de 2026 ese CLI es **Antigravity CLI** (`agy`), que reemplazó a Gemini CLI para cuentas personales. El proveedor `antigravity` lo ejecuta en modo *headless* (`agy -p`, salida JSON), sin shell y sin permisos para editar archivos. Las suscripciones son para uso personal; para un servicio con usuarios usa las APIs.
 
+### Usar tus cuentas (Claude Pro, Google AI Pro)
+
+Si pagas Claude Pro o Google AI Pro, SpecForge puede usar esas cuentas en vez de claves de API:
+
+1. **Google AI Pro:** instala [Antigravity CLI](https://antigravity.google/docs/cli), ejecuta `agy` una vez e inicia sesión con tu cuenta de Google.
+2. **Claude Pro:** instala [Claude Code](https://docs.claude.com/en/docs/claude-code) (`npm install -g @anthropic-ai/claude-code`), ejecuta `claude` una vez e inicia sesión.
+3. Comprueba qué responde de verdad:
+
+```bash
+python -m providers.diagnostico
+```
+
+```
+Modo actual: SPECFORGE_MODO=auto
+  ✓ antigravity (cuenta, modelo por defecto): «listo» en 4.2 s
+  ✓ claude (cuenta, sonnet): «listo» en 6.8 s
+  ✓ gemini (API, gemini-3.8-flash): «listo» en 0.9 s
+  — groq (API): sin clave en .env
+```
+
+`SPECFORGE_MODO` en `.env` decide qué se usa:
+
+| Modo | Qué usa |
+|---|---|
+| `auto` (por defecto) | Tus cuentas primero; si no tienen sesión o llegan a su límite, las APIs gratis |
+| `cuentas` | Solo Claude Pro / Google AI Pro |
+| `gratis` | Solo APIs con plan gratis (ignora los CLIs) |
+
 **Cadenas por defecto** (ver [`core/config.py`](./core/config.py)):
 
 | Nivel | Fases | Cadena |
@@ -109,7 +137,7 @@ Los proveedores sin clave (o sin el CLI instalado) se saltan. Cualquier nivel se
 SDD_CHAIN_SMART=antigravity:,gemini:gemini-3.8-flash,cerebras:gpt-oss-120b
 ```
 
-`python test_system.py` muestra qué proveedores quedaron listos.
+`python test_system.py` muestra qué proveedores están configurados; `python -m providers.diagnostico` hace una llamada real a cada uno.
 
 ### TELEGRAM_TOKEN — solo si usas Telegram
 

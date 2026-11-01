@@ -50,8 +50,11 @@ async def _run(cmd: list[str], stdin_text: str | None, timeout: float) -> str:
         raise CLIProviderError(f"{cmd[0]} no respondió en {timeout:.0f} s")
     out = _ANSI.sub("", stdout.decode("utf-8", errors="replace")).strip()
     if proc.returncode != 0 or not out:
-        err = stderr.decode("utf-8", errors="replace").strip()
-        raise CLIProviderError(f"{cmd[0]} falló (código {proc.returncode}): {err[:300]}")
+        err = _ANSI.sub("", stderr.decode("utf-8", errors="replace")).strip() or out
+        pista = f" ¿Iniciaste sesión? Abre `{cmd[0]}` una vez en la terminal." if proc.returncode else ""
+        raise CLIProviderError(
+            f"{cmd[0]} falló (código {proc.returncode}): {err[:300] or 'sin mensaje'}.{pista}"
+        )
     return out
 
 

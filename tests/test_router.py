@@ -70,3 +70,16 @@ def test_proveedor_desconocido():
 def test_conoce_todos_los_proveedores():
     assert {"gemini", "groq", "cerebras", "openrouter", "github", "nvidia",
             "claude", "antigravity"} <= set(router.PROVEEDORES)
+
+
+def test_diagnostico_reporta_cada_proveedor(monkeypatch, capsys):
+    from providers import diagnostico
+
+    for nombre in router.PROVEEDORES:
+        router.register(nombre, Falso(nombre, disponible=(nombre == "gemini")))
+    codigo = asyncio.run(diagnostico.main())
+    salida = capsys.readouterr().out
+    assert codigo == 0
+    assert "✓ gemini (API" in salida
+    assert "claude (cuenta): CLI no instalado" in salida
+    assert "1 proveedor(es) respondieron" in salida

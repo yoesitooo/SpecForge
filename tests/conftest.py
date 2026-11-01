@@ -17,7 +17,7 @@ CLAVES = [
 
 @pytest.fixture(autouse=True)
 def entorno_limpio(monkeypatch):
-    for var in CLAVES + [k for k in os.environ if k.startswith("SDD_CHAIN_")]:
+    for var in CLAVES + ["SPECFORGE_MODO"] + [k for k in os.environ if k.startswith("SDD_CHAIN_")]:
         monkeypatch.delenv(var, raising=False)
     from providers import router
     router._REGISTRY.clear()

@@ -27,3 +27,29 @@ def test_hay_respaldo_gratis_en_cada_nivel():
     gratis = {"gemini", "groq", "cerebras", "openrouter", "github", "nvidia"}
     for nivel in config.DEFAULT_CHAINS:
         assert any(p in gratis for p, _ in config.chain_for(nivel)), nivel
+
+
+def test_modo_auto_pone_las_cuentas_primero():
+    proveedores = [p for p, _ in config.chain_for("smart")]
+    assert proveedores[:2] == ["claude", "antigravity"]
+    assert "gemini" in proveedores
+
+
+def test_modo_gratis_ignora_las_cuentas(monkeypatch):
+    monkeypatch.setenv("SPECFORGE_MODO", "gratis")
+    for nivel in config.DEFAULT_CHAINS:
+        assert not {p for p, _ in config.chain_for(nivel)} & config.PROVEEDORES_CUENTA
+
+
+def test_modo_cuentas_solo_usa_cuentas(monkeypatch):
+    monkeypatch.setenv("SPECFORGE_MODO", "cuentas")
+    for nivel in config.DEFAULT_CHAINS:
+        cadena = config.chain_for(nivel)
+        assert cadena and {p for p, _ in cadena} <= config.PROVEEDORES_CUENTA, nivel
+
+
+def test_modo_invalido(monkeypatch):
+    import pytest
+    monkeypatch.setenv("SPECFORGE_MODO", "pagado")
+    with pytest.raises(EnvironmentError):
+        config.chain_for("smart")

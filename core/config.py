@@ -102,9 +102,34 @@ def parse_chain(spec: str) -> list[tuple[str, str]]:
     return chain
 
 
+# Proveedores que usan una cuenta con sesión iniciada (suscripción) en vez de clave de API.
+PROVEEDORES_CUENTA = {"claude", "antigravity"}
+
+# SPECFORGE_MODO decide qué se usa:
+#   auto    → tus cuentas primero (si el CLI tiene sesión) y las APIs gratis de respaldo
+#   cuentas → solo tus cuentas (Claude Pro, Google AI Pro); sin APIs
+#   gratis  → solo APIs con plan gratis; ignora los CLIs
+MODOS = ("auto", "cuentas", "gratis")
+
+
+def modo() -> str:
+    valor = _optional("SPECFORGE_MODO", "auto").strip().lower()
+    if valor not in MODOS:
+        raise EnvironmentError(f"SPECFORGE_MODO='{valor}' no es válido. Opciones: {', '.join(MODOS)}")
+    return valor
+
+
 def chain_for(tier: str) -> list[tuple[str, str]]:
     spec = _optional(f"SDD_CHAIN_{tier.upper()}") or DEFAULT_CHAINS[tier]
-    return parse_chain(spec)
+    cadena = parse_chain(spec)
+    m = modo()
+    if m == "gratis":
+        cadena = [(p, mod) for p, mod in cadena if p not in PROVEEDORES_CUENTA]
+    elif m == "cuentas":
+        cadena = [(p, mod) for p, mod in cadena if p in PROVEEDORES_CUENTA]
+        # Los niveles sin CLI en su cadena (p. ej. visión) usan la cuenta de Google.
+        cadena = cadena or [("antigravity", "")]
+    return cadena
 
 
 # =============================================================================
