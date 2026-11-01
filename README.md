@@ -20,7 +20,8 @@
 > | Generate pipeline with minimal per-task context | [`specforge/generar.py`](./specforge/generar.py) |
 > | Repair loop with git safety (own branch, rollback, only edited files committed) | [`specforge/reparar.py`](./specforge/reparar.py) |
 > | **Provider router with automatic fallback** — free tiers (Gemini, Groq, Cerebras, OpenRouter, GitHub Models, NVIDIA) and personal subscriptions through their CLIs (Claude Code, Antigravity CLI for Google AI Pro) | [`providers/`](./providers) · [`core/config.py`](./core/config.py) |
-> | 92 pytest tests, including end-to-end runs that generate a project and repair a real git repo with real test runs | [`tests/`](./tests) |
+> | Optional Telegram bot (long polling, single allowed chat, repair limited to declared repos) | [`specforge/telegram.py`](./specforge/telegram.py) |
+> | 102 pytest tests, including end-to-end runs that generate a project and repair a real git repo with real test runs | [`tests/`](./tests) |
 
 ---
 
@@ -97,6 +98,7 @@ SpecForge — ¿qué quieres hacer?
   1) Generar un proyecto desde una idea
   2) Reparar un proyecto cuyas pruebas fallan
   3) Ver qué proveedores de IA responden
+  4) Encender el bot de Telegram
   0) Salir
 ```
 
@@ -116,6 +118,37 @@ specforge reparar ../mi-web --prueba "npm test" --intentos 4
 specforge diagnostico
 ```
 
+
+---
+
+## Bot de Telegram (opcional): usarlo desde el celular
+
+Cada persona crea **su propio bot**; corre en su computador (no necesita servidor ni abrir puertos) y solo le responde a su dueño.
+
+1. **Crea el bot.** En Telegram busca **@BotFather** (con el check azul), escribe `/newbot`, elige un nombre y un usuario que termine en `bot`. Te da un **token**.
+2. **Obtén tu ID.** Escríbele a **@userinfobot**; te responde con tu número de ID.
+3. **Configura `.env`:**
+   ```bash
+   TELEGRAM_TOKEN=el-token-de-botfather
+   TELEGRAM_ALLOWED_CHAT_ID=tu-id
+   # Opcional: proyectos que el bot puede reparar, cada uno con SU comando de pruebas
+   SPECFORGE_REPOS=lexai=C:/code/LexAI|npm test; api=/home/yo/api|pytest -q
+   ```
+4. **Enciéndelo:** `specforge telegram` (o la opción 4 del menú). Déjalo abierto mientras lo uses.
+5. **Escríbele a tu bot:**
+
+| Comando | Qué hace |
+|---|---|
+| `/generar <idea>` | Crea el proyecto, te avisa cada etapa y te envía el informe |
+| `/reparar <nombre>` | Arregla un proyecto de `SPECFORGE_REPOS` y te envía el resultado |
+| `/proyectos` | Lista los proyectos que se pueden reparar |
+| `/estado` | Qué está haciendo |
+
+**Seguridad.** El bot ejecuta trabajo en tu computador, así que:
+- sin `TELEGRAM_ALLOWED_CHAT_ID` **no arranca**, y los mensajes de otros chats se ignoran;
+- desde Telegram no se puede escribir un comando ni una ruta: `/reparar` solo acepta nombres de `SPECFORGE_REPOS`, con el comando de pruebas que tú definiste;
+- `/generar` crea archivos en la carpeta de proyectos pero **no ejecuta** el código generado (la verificación se hace desde la terminal con `--verificar`);
+- hace un trabajo a la vez. Si el token se filtra, revócalo con `/revoke` en @BotFather.
 
 ---
 
@@ -172,7 +205,8 @@ Modo actual: SPECFORGE_MODO=auto
 ```
 SpecForge/
 ├── specforge/
-│   ├── __main__.py      # CLI: menú interactivo · generar · reparar · diagnostico
+│   ├── __main__.py      # CLI: menú interactivo · generar · reparar · diagnostico · telegram
+│   ├── telegram.py      # bot opcional (long polling, chat restringido)
 │   ├── generar.py       # proceso de especificación → tareas → código en olas
 │   ├── reparar.py       # reproducir → localizar → parche → validar (en rama git)
 │   ├── artefactos.py    # requisitos, diseño y plan: validación y Markdown
@@ -185,7 +219,7 @@ SpecForge/
 ├── memory/engram.py     # memoria SQLite FTS5 (decisiones y arreglos)
 ├── skills/              # guías por tecnología que se inyectan en el diseño
 ├── core/config.py       # niveles, cadenas y modos
-└── tests/               # 92 pruebas (pytest)
+└── tests/               # 102 pruebas (pytest)
 ```
 
 ## Pruebas

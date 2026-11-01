@@ -4,6 +4,7 @@ SpecForge — línea de comandos
   python -m specforge generar "app de citas para un consultorio" [--nombre citas] [--sin-preguntas] [--verificar] [--reparar]
   python -m specforge reparar RUTA --prueba "pytest -q" [--intentos 3]
   python -m specforge diagnostico
+  python -m specforge telegram        (bot opcional; ver README)
   python -m specforge                 (sin nada: menú interactivo)
 """
 
@@ -55,6 +56,23 @@ def _reparar(a: argparse.Namespace) -> int:
     return 0 if r.estado in ("arreglado", "ya_pasaba") else 1
 
 
+def _telegram(_: argparse.Namespace) -> int:
+    import core.config  # noqa: F401  (carga el .env)
+    from .telegram import ConfigTelegramInvalida, desde_entorno
+
+    try:
+        bot = desde_entorno()
+    except ConfigTelegramInvalida as e:
+        print(f"❌ {e}")
+        return 2
+    print("🤖 Bot activo. Escríbele en Telegram. Ctrl+C para detener.")
+    try:
+        asyncio.run(bot.correr())
+    except KeyboardInterrupt:
+        print("Bot detenido.")
+    return 0
+
+
 def _diagnostico(_: argparse.Namespace) -> int:
     from providers.diagnostico import main
 
@@ -67,6 +85,7 @@ def menu(entrada=input) -> list[str]:
           "  1) Generar un proyecto desde una idea\n"
           "  2) Reparar un proyecto cuyas pruebas fallan\n"
           "  3) Ver qué proveedores de IA responden\n"
+          "  4) Encender el bot de Telegram\n"
           "  0) Salir")
     opcion = entrada("Opción: ").strip()
     if opcion == "1":
@@ -83,6 +102,8 @@ def menu(entrada=input) -> list[str]:
         return ["reparar", ruta, "--prueba", prueba] if prueba else []
     if opcion == "3":
         return ["diagnostico"]
+    if opcion == "4":
+        return ["telegram"]
     return []
 
 
@@ -112,6 +133,9 @@ def main(argv: list[str] | None = None) -> int:
 
     d = sub.add_parser("diagnostico", help="probar qué proveedores de IA responden")
     d.set_defaults(func=_diagnostico)
+
+    t = sub.add_parser("telegram", help="encender el bot de Telegram (opcional)")
+    t.set_defaults(func=_telegram)
 
     a = p.parse_args(argv)
     return a.func(a)

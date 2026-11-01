@@ -12,6 +12,10 @@ def test_menu_generar_con_reparacion():
     assert menu(respuestas("1", "agenda de citas", "s")) == ["generar", "agenda de citas", "--reparar"]
 
 
+def test_menu_telegram():
+    assert menu(respuestas("4")) == ["telegram"]
+
+
 def test_menu_reparar():
     assert menu(respuestas("2", "", "pytest -q")) == ["reparar", ".", "--prueba", "pytest -q"]
 
