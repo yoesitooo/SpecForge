@@ -30,9 +30,17 @@ def test_hay_respaldo_gratis_en_cada_nivel():
 
 
 def test_modo_auto_pone_las_cuentas_primero():
-    proveedores = [p for p, _ in config.chain_for("smart")]
-    assert proveedores[:2] == ["claude", "antigravity"]
-    assert "gemini" in proveedores
+    for nivel in ("deep", "code", "smart"):
+        proveedores = [p for p, _ in config.chain_for(nivel)]
+        assert set(proveedores[:2]) == {"claude", "antigravity"}, nivel
+        assert "gemini" in proveedores, nivel
+
+
+def test_claude_para_calidad_y_google_para_volumen():
+    assert config.chain_for("deep")[0][0] == "claude"
+    assert config.chain_for("code")[0][0] == "claude"
+    assert config.chain_for("smart")[0][0] == "antigravity"
+    assert config.chain_for("fast")[0][0] == "antigravity"
 
 
 def test_modo_gratis_ignora_las_cuentas(monkeypatch):

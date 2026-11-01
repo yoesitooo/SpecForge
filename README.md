@@ -34,18 +34,13 @@ Tiene dos modos de uso:
 ```bash
 git clone https://github.com/yoesitooo/SpecForge.git
 cd SpecForge
-pip install -r requirements.txt
 ```
 
-### 2. Configurar una clave (gratis)
+**Windows:** doble clic en `instalar.bat`. **Linux / macOS:** `./instalar.sh`.
 
-```bash
-# Windows
-copy .env.example .env
+Crea un entorno virtual (`.venv`), instala las dependencias, copia `.env.example` a `.env` y prueba los proveedores.
 
-# Linux / Mac
-cp .env.example .env
-```
+### 2. Configurar una clave (gratis) o tus cuentas
 
 Abre `.env` y pon al menos una clave gratis, por ejemplo `GEMINI_API_KEY` (ver **Modelos: gratis primero** más abajo).
 
@@ -66,13 +61,16 @@ Muestra qué dependencias y proveedores quedaron listos (basta con un proveedor)
 | `jarvis_terminal.bat` | Jarvis en terminal Rich. **Sin micrófono, sin Telegram.** El más fácil para empezar. |
 | `jarvis_voz.bat` | Jarvis por voz. Requiere micrófono. Abre el orb visual en `http://localhost:8000/jarvis`. Di "Jarvis" para activar. |
 | `jarvis_telegram.bat` | Bot de Telegram activo. Requiere `TELEGRAM_TOKEN` en `.env`. |
-| `jarvis_voz_telegram.bat` | Voz + Telegram simultáneo. Ambos activos al mismo tiempo. |
+| `jarvis_voz_telegram.bat` | Voz + Telegram al mismo tiempo (`TRANSPORT_MODE=voice,telegram`). |
+| `diagnostico.bat` | Prueba real de cada proveedor: cuáles responden con tu configuración. |
 
 **Linux / Mac:**
 ```bash
 TRANSPORT_MODE=cli python main.py        # terminal
 TRANSPORT_MODE=voice ENABLE_HTTP=true python main.py   # voz
 TRANSPORT_MODE=telegram python main.py   # telegram
+TRANSPORT_MODE=voice,telegram ENABLE_HTTP=true python main.py   # voz + telegram
+TRANSPORT_MODE=http python main.py       # solo la API HTTP (Docker)
 ```
 
 ---
@@ -122,13 +120,14 @@ Modo actual: SPECFORGE_MODO=auto
 | `cuentas` | Solo Claude Pro / Google AI Pro |
 | `gratis` | Solo APIs con plan gratis (ignora los CLIs) |
 
-**Cadenas por defecto** (ver [`core/config.py`](./core/config.py)):
+**Cadenas por defecto** (ver [`core/config.py`](./core/config.py)). Están pensadas para quien tiene Claude Pro y Google AI Pro: Claude va donde más importa la calidad y hay pocas llamadas; la cuenta de Google, que permite más consultas al día, va donde hay muchas. Las APIs gratis siempre quedan de respaldo.
 
 | Nivel | Fases | Cadena |
 |---|---|---|
-| `smart` | discovery, requirements, architecture, code_review | claude → antigravity → gemini-3.8-flash → groq gpt-oss-120b → groq llama-3.3-70b |
+| `deep` | architecture, code_review | claude → antigravity → gemini-3.8-flash → groq gpt-oss-120b |
 | `code` | frontend, backend | claude → antigravity → gemini-3.8-flash → groq gpt-oss-120b |
-| `fast` | hu_writer, tech_spec, db, qa | gemini-3.5-flash-lite → groq llama-3.1-8b → groq gpt-oss-20b → antigravity |
+| `smart` | discovery, requirements | antigravity → claude → gemini-3.8-flash → groq gpt-oss-120b → groq llama-3.3-70b |
+| `fast` | hu_writer, tech_spec, db, qa | antigravity → gemini-3.5-flash-lite → groq llama-3.1-8b → groq gpt-oss-20b |
 | `vision` | ux_ui | gemini-3.8-flash → NVIDIA llama-3.2-11b-vision |
 
 Los proveedores sin clave (o sin el CLI instalado) se saltan. Cualquier nivel se cambia desde `.env`, por ejemplo:
@@ -275,6 +274,8 @@ SpecForge/
 ├── jarvis_voz.bat           ← doble clic para modo voz
 ├── jarvis_telegram.bat      ← doble clic para modo Telegram
 ├── jarvis_voz_telegram.bat  ← doble clic para ambos simultáneo
+├── instalar.bat / instalar.sh ← instalación en un paso
+├── diagnostico.bat          ← prueba real de proveedores
 ├── main.py
 ├── test_system.py
 ├── requirements.txt
@@ -311,7 +312,7 @@ JARVIS_RATE=+10%                    # Velocidad
 
 | Problema | Solución |
 |----------|----------|
-| `ModuleNotFoundError` | `pip install -r requirements.txt` |
+| `ModuleNotFoundError` | Vuelve a correr `instalar.bat` (o `./instalar.sh`) |
 | `Ningún proveedor pudo responder` | Agrega al menos una clave gratis (por ejemplo `GEMINI_API_KEY`) en `.env`; el mensaje lista el motivo de cada proveedor |
 | El bot de Telegram no responde | Verificar `TELEGRAM_TOKEN` y `TELEGRAM_ALLOWED_CHAT_ID` en `.env` |
 | Jarvis no escucha el micrófono | Windows → Configuración → Privacidad → Micrófono → Permitir acceso |

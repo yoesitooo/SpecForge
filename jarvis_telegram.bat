@@ -1,11 +1,12 @@
 @echo off
 title Jarvis — Telegram
 cd /d "%~dp0"
+if exist ".venv\Scripts\python.exe" (set "PY=.venv\Scripts\python.exe") else (set "PY=python")
 echo.
 echo  Bot de Telegram activo
-echo  Escríbele a tu bot en Telegram
+echo  Escribele a tu bot en Telegram
 echo  Ctrl+C para detener
 echo.
 set TRANSPORT_MODE=telegram
-python main.py
+%PY% main.py
 pause

@@ -2,9 +2,11 @@
 main.py — Entry point del SpecForge.
 Inicializa DBs y arranca los transportes configurados.
 
-Transportes disponibles (se pueden combinar con ENABLE_HTTP=true):
-  TRANSPORT_MODE=telegram  → aiogram bot (default)
-  TRANSPORT_MODE=cli       → consola interactiva para debug
+Transportes disponibles (se pueden combinar con coma: TRANSPORT_MODE=voice,telegram):
+  TRANSPORT_MODE=cli       → consola interactiva (default)
+  TRANSPORT_MODE=telegram  → aiogram bot
+  TRANSPORT_MODE=voice     → Jarvis por voz
+  TRANSPORT_MODE=http      → solo la API HTTP (Docker / OpenClaw)
   ENABLE_HTTP=true         → FastAPI en HTTP_PORT (para OpenClaw y dashboard)
                              se puede activar junto a cualquier otro modo
 """
@@ -157,6 +159,22 @@ async def _cli_transport():
             break
 
 
+TRANSPORTES = {"telegram", "voice", "cli", "http"}
+
+
+def parse_transportes(valor: str) -> set[str]:
+    """'voice, telegram' → {"voice", "telegram"}. Falla si alguno no existe."""
+    elegidos = {t.strip().lower() for t in valor.split(",") if t.strip()}
+    desconocidos = elegidos - TRANSPORTES
+    if not elegidos or desconocidos:
+        log.error(
+            f"TRANSPORT_MODE inválido: '{valor}'. Opciones: {', '.join(sorted(TRANSPORTES))} "
+            "(se pueden combinar con coma)."
+        )
+        sys.exit(1)
+    return elegidos
+
+
 async def main():
     log.info("Iniciando SpecForge...")
 
@@ -164,13 +182,13 @@ async def main():
     engram.init_db()
     log.info("DBs inicializadas.")
 
-    transport = os.getenv("TRANSPORT_MODE", "telegram").lower()
+    transportes = parse_transportes(os.getenv("TRANSPORT_MODE", "cli"))
     enable_http = os.getenv("ENABLE_HTTP", "false").lower() == "true"
 
     tasks = []
 
-    # ── Transporte principal ──────────────────────────────────────────────────
-    if transport == "telegram":
+    # ── Transportes (se pueden combinar: TRANSPORT_MODE=voice,telegram) ───────
+    if "telegram" in transportes:
         if not TELEGRAM_TOKEN:
             log.error("TELEGRAM_TOKEN no configurado.")
             sys.exit(1)
@@ -178,24 +196,20 @@ async def main():
         log.info("Telegram transport activo.")
         tasks.append(start_polling())
 
-    elif transport == "voice":
+    if "voice" in transportes:
         from transports.voice_transport import start_voice
         log.info("Voice transport (Jarvis) activo.")
         log.info(f"  Visual: http://localhost:{HTTP_PORT}/jarvis")
         tasks.append(start_voice())
 
-    elif transport == "cli":
+    if "cli" in transportes:
         tasks.append(_cli_transport())
 
-    else:
-        log.error(f"TRANSPORT_MODE desconocido: '{transport}'")
-        sys.exit(1)
-
     # ── HTTP transport — rama OpenClaw + Jarvis visual (opcional) ────────────
-    if enable_http or transport == "http":
+    if enable_http or "http" in transportes:
         tasks.append(_start_http())
         # Inyectar broadcast al voice transport si ambos corren juntos
-        if transport == "voice":
+        if "voice" in transportes:
             from transports.http_transport import broadcast_jarvis_state
             from transports.voice_transport import get_state
             get_state().set_broadcast(broadcast_jarvis_state)

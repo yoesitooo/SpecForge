@@ -77,14 +77,16 @@ SKILLS_DIR        = ROOT_DIR / "skills"
 # Un modelo vacío ("antigravity:") usa el modelo por defecto del CLI.
 # =============================================================================
 DEFAULT_CHAINS: dict[str, str] = {
-    # Razonamiento: discovery, requisitos, arquitectura, revisión de código
-    "smart":  "claude:sonnet,antigravity:,gemini:gemini-3.8-flash,"
-              "groq:openai/gpt-oss-120b,groq:llama-3.3-70b-versatile",
+    # Decisiones de fondo: arquitectura y revisión de código (pocas llamadas, máxima calidad)
+    "deep":   "claude:sonnet,antigravity:,gemini:gemini-3.8-flash,groq:openai/gpt-oss-120b",
     # Generación de código: frontend y backend
     "code":   "claude:sonnet,antigravity:,gemini:gemini-3.8-flash,groq:openai/gpt-oss-120b",
+    # Conversación y documentos: discovery, requisitos (muchas llamadas)
+    "smart":  "antigravity:,claude:sonnet,gemini:gemini-3.8-flash,"
+              "groq:openai/gpt-oss-120b,groq:llama-3.3-70b-versatile",
     # Tareas estructuradas y rápidas: historias de usuario, spec, BD, QA
-    "fast":   "gemini:gemini-3.5-flash-lite,groq:llama-3.1-8b-instant,"
-              "groq:openai/gpt-oss-20b,antigravity:",
+    "fast":   "antigravity:,gemini:gemini-3.5-flash-lite,groq:llama-3.1-8b-instant,"
+              "groq:openai/gpt-oss-20b",
     # Entrada con imágenes: UX/UI
     "vision": "gemini:gemini-3.8-flash,nvidia:meta/llama-3.2-11b-vision-instruct",
 }
@@ -139,7 +141,7 @@ def chain_for(tier: str) -> list[tuple[str, str]]:
 AGENT_MODELS: dict[str, dict] = {
     "discovery":    {"tier": "smart",  "temperature": 0.8},   # Fase 1 — conversacional
     "requirements": {"tier": "smart",  "temperature": 0.4},   # Fase 2 — PRD
-    "architecture": {"tier": "smart",  "temperature": 0.2},   # Fase 3 — ADRs
+    "architecture": {"tier": "deep",   "temperature": 0.2},   # Fase 3 — ADRs
     "ux_ui":        {"tier": "vision", "temperature": 0.5},   # Fase 4a — necesita visión
     "hu_writer":    {"tier": "fast",   "temperature": 0.15},  # Fase 4b — Gherkin
     "tech_spec":    {"tier": "fast",   "temperature": 0.05},  # Fase 5 — tareas atómicas
@@ -147,5 +149,5 @@ AGENT_MODELS: dict[str, dict] = {
     "backend":      {"tier": "code",   "temperature": 0.1},   # Fase 6b
     "db":           {"tier": "fast",   "temperature": 0.05},  # Fase 6c — SQL
     "qa":           {"tier": "fast",   "temperature": 0.1},   # Fase 7a
-    "code_review":  {"tier": "smart",  "temperature": 0.1},   # Fase 7b
+    "code_review":  {"tier": "deep",   "temperature": 0.1},   # Fase 7b
 }
