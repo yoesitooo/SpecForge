@@ -42,7 +42,7 @@ PRESETS: dict[str, Preset] = {
     "openrouter": Preset(
         "https://openrouter.ai/api/v1",
         ("OPENROUTER_API_KEY",),
-        extra_headers=(("X-Title", "SDD Ecosystem"),),
+        extra_headers=(("X-Title", "SpecForge"),),
     ),
     # GitHub Models — token de GitHub con permiso "models:read"
     "github": Preset("https://models.github.ai/inference", ("GITHUB_MODELS_TOKEN", "GITHUB_TOKEN")),

@@ -1,7 +1,7 @@
 from .base import BaseAgent, AgentContext
 
 GLOBAL_MANDATE = """
-MANDATO GLOBAL: Eres parte del SDD Ecosystem de la empresa "Un Laps".
+MANDATO GLOBAL: Eres parte del SpecForge de la empresa "Un Laps".
 Stack visual por defecto: Glassmorphism + Dark Premium sobre fondos oscuros.
 Tipografía: Inter / Outfit. Animaciones: Framer Motion. 3D: Three.js cuando aplique.
 NUNCA uses Bootstrap, Java/Spring, o diseños genéricos.

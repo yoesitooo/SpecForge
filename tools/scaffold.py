@@ -156,7 +156,7 @@ const inter = Inter({{ subsets: ["latin"], variable: "--font-sans" }});
 
 export const metadata: Metadata = {{
   title: "{display_name}",
-  description: "Generado por SDD Ecosystem",
+  description: "Generado por SpecForge",
 }};
 
 export default function RootLayout({{
@@ -243,10 +243,10 @@ def scaffold_python(workspace: Path, project_name: str, project_type: str = "api
 
     name = project_name.lower().replace(" ", "_").replace("-", "_")
 
-    write("requirements.txt", "# Dependencias del proyecto\n# Generado por SDD Ecosystem\n")
+    write("requirements.txt", "# Dependencias del proyecto\n# Generado por SpecForge\n")
     write(".env.example", "# Variables de entorno\n")
     write(".gitignore", "__pycache__/\n*.pyc\n.env\n*.db\n.venv/\n")
-    write("README.md", f"# {project_name}\n\nGenerado por SDD Ecosystem.\n")
+    write("README.md", f"# {project_name}\n\nGenerado por SpecForge.\n")
 
     if project_type == "telegram_bot":
         write("main.py", f"\"\"\"Bot de Telegram — {project_name}\"\"\"\nimport asyncio\n\nasync def main():\n    pass\n\nif __name__ == '__main__':\n    asyncio.run(main())\n")

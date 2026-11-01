@@ -1,5 +1,5 @@
 """
-main.py — Entry point del SDD Ecosystem.
+main.py — Entry point del SpecForge.
 Inicializa DBs y arranca los transportes configurados.
 
 Transportes disponibles (se pueden combinar con ENABLE_HTTP=true):
@@ -77,7 +77,7 @@ async def _cli_transport():
 
     BANNER = """
 ╔══════════════════════════════════════════════════╗
-║          SDD Ecosystem — Modo CLI                ║
+║          SpecForge — Modo CLI                    ║
 ║                                                  ║
 ║  Habla con Jarvis o gestiona proyectos de código ║
 ║  Escribe 'ayuda' para ver comandos disponibles   ║
@@ -158,7 +158,7 @@ async def _cli_transport():
 
 
 async def main():
-    log.info("Iniciando SDD Ecosystem...")
+    log.info("Iniciando SpecForge...")
 
     session_store.init_sessions()
     engram.init_db()

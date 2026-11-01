@@ -1,10 +1,12 @@
-# SDD Ecosystem
+# SpecForge
 
-**Sistema multi-agente que convierte una descripción en lenguaje natural en un proyecto de software funcional.**
+![tests](https://github.com/yoesitooo/SpecForge/actions/workflows/tests.yml/badge.svg)
+
+**Sistema multi-agente que convierte una descripción en lenguaje natural en un proyecto de software funcional, siguiendo Spec-Driven Development (SDD): primero las especificaciones, después el código.**
 
 > **🇬🇧 In English — at a glance**
 >
-> SDD (Spec-Driven Development) Ecosystem is a Python multi-agent orchestrator: you describe a project in plain language and **11 specialised LLM agents** take it through discovery → requirements → architecture → UX/UI + user stories → tech spec → frontend + backend + DB → QA + code review.
+> SpecForge is a Python multi-agent orchestrator built around Spec-Driven Development (SDD): you describe a project in plain language and **11 specialised LLM agents** take it through discovery → requirements → architecture → UX/UI + user stories → tech spec → frontend + backend + DB → QA + code review.
 >
 > | Design point | Where to look |
 > |---|---|
@@ -30,8 +32,8 @@ Tiene dos modos de uso:
 ### 1. Clonar e instalar
 
 ```bash
-git clone https://github.com/yoesitooo/SDD-Ecosystem-core.git
-cd SDD-Ecosystem-core
+git clone https://github.com/yoesitooo/SpecForge.git
+cd SpecForge
 pip install -r requirements.txt
 ```
 
@@ -224,7 +226,7 @@ npm run dev    # → http://localhost:3000
 ## Estructura del proyecto
 
 ```
-SDD-Ecosystem/
+SpecForge/
 ├── agents/           # 11 agentes DAG + Jarvis assistant + smart discovery
 ├── orchestrator/     # Motor DAG: executor, dag, circuit breaker, autopilot
 ├── providers/        # Router con respaldo + APIs OpenAI-compatibles + CLIs de suscripción
@@ -351,4 +353,4 @@ MIT — libre de usar, modificar y distribuir con atribución.
 
 ---
 
-*Construido con Claude Code, Groq, NVIDIA NIM y mucho café.*
+*Empezó como [agente_html](https://github.com/yoesitooo/agentes_de_ia), un solo agente que generaba páginas HTML; SpecForge lo convirtió en un equipo de 11 agentes.*

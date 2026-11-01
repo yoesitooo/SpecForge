@@ -1,5 +1,5 @@
 # =============================================================================
-# SDD ECOSYSTEM — .gitignore
+# SPECFORGE — .gitignore
 # Lo que se sube: código fuente, skills, docs, config de ejemplo.
 # Lo que NO se sube: secretos, datos, binarios, output generado.
 # =============================================================================

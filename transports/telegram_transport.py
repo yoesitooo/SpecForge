@@ -63,7 +63,7 @@ async def cmd_start(msg: Message):
     if not _allowed(msg.chat.id):
         return
     await _send(msg.chat.id,
-        "👋 *SDD Ecosystem — Un Laps*\n\n"
+        "👋 *SpecForge — Un Laps*\n\n"
         "Soy el orquestador de agentes de desarrollo. Puedo construir proyectos "
         "completos de software guiándote por 7 fases.\n\n"
         "Comandos disponibles:\n"

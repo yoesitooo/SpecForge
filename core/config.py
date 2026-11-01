@@ -1,5 +1,5 @@
 """
-Core Config — SDD Ecosystem
+Core Config — SpecForge
 ============================
 Única fuente de verdad para toda la configuración del sistema.
 Lee desde .env via python-dotenv. CERO fallbacks hardcodeados.
