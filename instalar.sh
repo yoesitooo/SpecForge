@@ -12,4 +12,4 @@ if [ ! -f .env ]; then cp .env.example .env; echo "    Se creó .env: agrega al 
 echo "4/4 Probando proveedores..."
 .venv/bin/python -m specforge diagnostico || true
 echo
-echo "Listo. Ejemplo: .venv/bin/python -m specforge generar \"agenda de citas para un consultorio\""
+echo "Listo. Activa el entorno (source .venv/bin/activate) y escribe: specforge"

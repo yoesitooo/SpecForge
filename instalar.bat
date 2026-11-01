@@ -12,7 +12,7 @@ if not exist ".env" (copy ".env.example" ".env" >nul & echo     Se creo .env: ag
 echo  4/4 Probando proveedores...
 ".venv\Scripts\python.exe" -m specforge diagnostico
 echo.
-echo  Listo. Ejemplo: specforge generar "agenda de citas para un consultorio"
+echo  Listo. Abre specforge.bat (o activa .venv y escribe: specforge) para ver el menu.
 pause
 exit /b 0
 :error
