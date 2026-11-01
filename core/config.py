@@ -36,16 +36,7 @@ def _optional(var: str, default: str = "") -> str:
 # Las claves se leen directamente en providers/openai_compat.py (GEMINI_API_KEY,
 # GROQ_API_KEY, CEREBRAS_API_KEY, OPENROUTER_API_KEY, GITHUB_MODELS_TOKEN,
 # NVIDIA_API_KEY). Todas son opcionales: basta con una. Ver .env.example.
-# GROQ_API_KEY también la usa Jarvis para la voz (Whisper).
 # =============================================================================
-GROQ_API_KEY = _optional("GROQ_API_KEY")
-
-
-# =============================================================================
-# TELEGRAM
-# =============================================================================
-TELEGRAM_TOKEN          = _optional("TELEGRAM_TOKEN")   # solo se exige con TRANSPORT_MODE=telegram (ver main.py)
-TELEGRAM_ALLOWED_CHAT_ID = _optional("TELEGRAM_ALLOWED_CHAT_ID")
 
 
 # =============================================================================
@@ -55,8 +46,8 @@ _raw_engram       = _optional("ENGRAM_DB_PATH",    str(ROOT_DIR / "memory" / "en
 ENGRAM_DB_PATH    = str((ROOT_DIR / _raw_engram).resolve()) if not Path(_raw_engram).is_absolute() else _raw_engram
 WORKSPACES_PATH   = _optional("WORKSPACES_PATH",   str(ROOT_DIR / "workspaces"))
 LOG_LEVEL         = _optional("LOG_LEVEL",         "INFO")
-HTTP_PORT         = int(_optional("HTTP_PORT",     "8000"))
-TRANSPORT_MODE    = _optional("TRANSPORT_MODE",    "telegram")
+# Máximo de agentes trabajando a la vez (3–5 es el punto óptimo reportado)
+MAX_PARALELO      = int(_optional("SPECFORGE_PARALELO", "3"))
 
 # Directorio de skills
 SKILLS_DIR        = ROOT_DIR / "skills"
@@ -87,8 +78,6 @@ DEFAULT_CHAINS: dict[str, str] = {
     # Tareas estructuradas y rápidas: historias de usuario, spec, BD, QA
     "fast":   "antigravity:,gemini:gemini-3.5-flash-lite,groq:llama-3.1-8b-instant,"
               "groq:openai/gpt-oss-20b",
-    # Entrada con imágenes: UX/UI
-    "vision": "gemini:gemini-3.8-flash,nvidia:meta/llama-3.2-11b-vision-instruct",
 }
 
 
@@ -135,19 +124,18 @@ def chain_for(tier: str) -> list[tuple[str, str]]:
 
 
 # =============================================================================
-# NIVEL Y TEMPERATURA POR AGENTE DEL DAG
-# Cambiar el modelo de un agente = cambiar su nivel aquí o la cadena en .env.
+# NIVEL Y TEMPERATURA POR ETAPA
+# Cambiar el modelo de una etapa = cambiar su nivel aquí o la cadena en .env.
 # =============================================================================
 AGENT_MODELS: dict[str, dict] = {
-    "discovery":    {"tier": "smart",  "temperature": 0.8},   # Fase 1 — conversacional
-    "requirements": {"tier": "smart",  "temperature": 0.4},   # Fase 2 — PRD
-    "architecture": {"tier": "deep",   "temperature": 0.2},   # Fase 3 — ADRs
-    "ux_ui":        {"tier": "vision", "temperature": 0.5},   # Fase 4a — necesita visión
-    "hu_writer":    {"tier": "fast",   "temperature": 0.15},  # Fase 4b — Gherkin
-    "tech_spec":    {"tier": "fast",   "temperature": 0.05},  # Fase 5 — tareas atómicas
-    "frontend":     {"tier": "code",   "temperature": 0.1},   # Fase 6a
-    "backend":      {"tier": "code",   "temperature": 0.1},   # Fase 6b
-    "db":           {"tier": "fast",   "temperature": 0.05},  # Fase 6c — SQL
-    "qa":           {"tier": "fast",   "temperature": 0.1},   # Fase 7a
-    "code_review":  {"tier": "deep",   "temperature": 0.1},   # Fase 7b
+    # Modo generar
+    "descubrimiento": {"tier": "smart", "temperature": 0.6},  # preguntas para aclarar la idea
+    "requisitos":     {"tier": "smart", "temperature": 0.3},  # historias, criterios, casos de uso
+    "diseno":         {"tier": "deep",  "temperature": 0.2},  # arquitectura y contratos
+    "tareas":         {"tier": "smart", "temperature": 0.2},  # plan de tareas con dependencias
+    "implementacion": {"tier": "code",  "temperature": 0.1},  # una llamada por tarea, en paralelo
+    "revision":       {"tier": "deep",  "temperature": 0.1},  # trazabilidad y revisión final
+    # Modo reparar
+    "localizar":      {"tier": "fast",  "temperature": 0.0},  # qué archivos tocar
+    "parche":         {"tier": "code",  "temperature": 0.1},  # el arreglo
 }

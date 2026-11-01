@@ -10,9 +10,9 @@ echo  2/4 Instalando dependencias...
 echo  3/4 Preparando .env...
 if not exist ".env" (copy ".env.example" ".env" >nul & echo     Se creo .env: agrega al menos una clave gratis o inicia sesion con agy / claude.) else (echo     .env ya existe, no se toca.)
 echo  4/4 Probando proveedores...
-".venv\Scripts\python.exe" -m providers.diagnostico
+".venv\Scripts\python.exe" -m specforge diagnostico
 echo.
-echo  Listo. Abre jarvis_terminal.bat para empezar.
+echo  Listo. Ejemplo: specforge generar "agenda de citas para un consultorio"
 pause
 exit /b 0
 :error

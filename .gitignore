@@ -26,7 +26,6 @@ memory/orchestrator_state.json
 
 # ── OUTPUT GENERADO ───────────────────────────────────────────────────────────
 workspaces/          # Proyectos generados por los agentes
-Documents/Jarvis/    # Documentos creados por Jarvis
 static/screenshots/
 *.mp3                # Audio TTS temporal
 
@@ -67,7 +66,6 @@ Thumbs.db
 *.swp
 *.bak
 *.tmp
-.openclaw/
 
 
 # ── DOCKER (infraestructura local, no relevante para el repo) ─────────────────

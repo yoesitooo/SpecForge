@@ -10,6 +10,6 @@ echo "2/4 Instalando dependencias..."
 echo "3/4 Preparando .env..."
 if [ ! -f .env ]; then cp .env.example .env; echo "    Se creó .env: agrega al menos una clave gratis o inicia sesión con agy / claude."; else echo "    .env ya existe, no se toca."; fi
 echo "4/4 Probando proveedores..."
-.venv/bin/python -m providers.diagnostico || true
+.venv/bin/python -m specforge diagnostico || true
 echo
-echo "Listo. Arranca con: TRANSPORT_MODE=cli .venv/bin/python main.py"
+echo "Listo. Ejemplo: .venv/bin/python -m specforge generar \"agenda de citas para un consultorio\""

@@ -2,7 +2,7 @@
 Diagnóstico real de proveedores — ¿cuáles responden con TU configuración?
 =========================================================================
 Uso:
-    python -m providers.diagnostico
+    python -m specforge diagnostico
 
 Para cada proveedor configurado (clave en .env o CLI con sesión iniciada)
 hace UNA llamada mínima y muestra si respondió, con qué modelo y en cuánto

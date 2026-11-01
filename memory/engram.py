@@ -1,5 +1,5 @@
 """
-ENGRAM - Sistema de Memoria Persistente para el Marco SDD
+ENGRAM - Memoria persistente de SpecForge (SQLite + búsqueda FTS5)
 =========================================================
 Basado en el "Model Context Protocol (MCP)" descrito en el Marco Operativo SDD.
 Utiliza SQLite con FTS5 para búsquedas de alta relevancia ("señales raras").
@@ -10,15 +10,17 @@ No guarda todo el historial (ruido). Captura quirúrgicamente:
   - Patrones establecidos (estándares del proyecto)
 """
 
+import logging
 import sqlite3
 import os
 import json
 import hashlib
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from core.config import ENGRAM_DB_PATH
 DB_PATH = ENGRAM_DB_PATH
+log = logging.getLogger(__name__)
 
 
 def _get_conn() -> sqlite3.Connection:
@@ -80,7 +82,7 @@ def init_db():
 
     conn.commit()
     conn.close()
-    print(f"[ENGRAM] Base de datos inicializada en: {DB_PATH}")
+    log.debug(f"[ENGRAM] Base de datos inicializada en: {DB_PATH}")
 
 
 def save_signal(project: str, rol: str, tipo: str, contenido: str, metadata: dict = None) -> int:
@@ -119,13 +121,13 @@ def save_signal(project: str, rol: str, tipo: str, contenido: str, metadata: dic
         contenido,
         json.dumps(metadata or {}),
         content_hash,
-        datetime.utcnow().isoformat()
+        datetime.now(timezone.utc).isoformat()
     ))
 
     inserted_id = cursor.lastrowid
     conn.commit()
     conn.close()
-    print(f"[ENGRAM] OK: Senal guardada [{tipo.upper()}] por {rol} en proyecto '{project}' (ID: {inserted_id})")
+    log.debug(f"[ENGRAM] OK: Senal guardada [{tipo.upper()}] por {rol} en proyecto '{project}' (ID: {inserted_id})")
     return inserted_id
 
 
@@ -259,7 +261,7 @@ def engram_sync(output_path: str = None):
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(rows, f, indent=2, ensure_ascii=False)
 
-    print(f"[ENGRAM] SYNC: Sincronizacion exportada: {len(rows)} senales -> {output_path}")
+    log.debug(f"[ENGRAM] SYNC: Sincronizacion exportada: {len(rows)} senales -> {output_path}")
     return output_path
 
 
@@ -269,7 +271,7 @@ def migrate_from_json(json_path: str, project: str = "migrated"):
     Solo se ejecuta una vez durante la transición.
     """
     if not os.path.exists(json_path):
-        print(f"[ENGRAM] No se encontró {json_path}, nada que migrar.")
+        log.debug(f"[ENGRAM] No se encontró {json_path}, nada que migrar.")
         return
 
     with open(json_path, "r", encoding="utf-8") as f:
@@ -294,7 +296,7 @@ def migrate_from_json(json_path: str, project: str = "migrated"):
     for entry in history[-5:]:  # Solo los últimos 5 mensajes
         save_signal(project_name, "director_legacy", "summary", entry)
 
-    print(f"[ENGRAM] OK: Migracion completada desde {json_path} -> proyecto '{project_name}'")
+    log.debug(f"[ENGRAM] OK: Migracion completada desde {json_path} -> proyecto '{project_name}'")
 
 
 if __name__ == "__main__":
@@ -307,8 +309,8 @@ if __name__ == "__main__":
     save_signal("TestProject", "verificador", "error",
                 "Error detectado: falta validación de email en el formulario de contacto")
 
-    print("\n" + retrieve_context("TestProject"))
-    print("\n" + search_signals("SQLite", project="TestProject"))
+    log.debug("\n" + retrieve_context("TestProject"))
+    log.debug("\n" + search_signals("SQLite", project="TestProject"))
 
     engram_sync("/tmp/engram_test_export.json")
-    print("[ENGRAM] ✅ Test completado exitosamente.")
+    log.debug("[ENGRAM] ✅ Test completado exitosamente.")
