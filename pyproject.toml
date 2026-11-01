@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "specforge"
+version = "0.2.0"
+description = "Agentes de IA con especificaciones primero y reparación validada con pruebas"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+dependencies = ["python-dotenv>=1.0.0", "httpx>=0.27.0"]
+
+[project.scripts]
+specforge = "specforge.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["specforge*", "providers*", "core*", "memory*", "skills*"]
+
+[tool.setuptools.package-data]
+skills = ["**/*.md"]

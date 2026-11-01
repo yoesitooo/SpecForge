@@ -20,7 +20,7 @@
 > | Generate pipeline with minimal per-task context | [`specforge/generar.py`](./specforge/generar.py) |
 > | Repair loop with git safety (own branch, rollback, only edited files committed) | [`specforge/reparar.py`](./specforge/reparar.py) |
 > | **Provider router with automatic fallback** — free tiers (Gemini, Groq, Cerebras, OpenRouter, GitHub Models, NVIDIA) and personal subscriptions through their CLIs (Claude Code, Antigravity CLI for Google AI Pro) | [`providers/`](./providers) · [`core/config.py`](./core/config.py) |
-> | 85 pytest tests, including end-to-end runs that generate a project and repair a real git repo with real test runs | [`tests/`](./tests) |
+> | 92 pytest tests, including end-to-end runs that generate a project and repair a real git repo with real test runs | [`tests/`](./tests) |
 
 ---
 
@@ -86,23 +86,36 @@ cd SpecForge
 ```
 
 **Windows:** doble clic en `instalar.bat`. **Linux / macOS:** `./instalar.sh`.
-Crea un entorno virtual, instala las **2 dependencias** (`httpx`, `python-dotenv`), copia `.env.example` a `.env` y prueba los proveedores.
+Crea un entorno virtual, instala SpecForge con sus **2 dependencias** (`httpx`, `python-dotenv`) y el comando `specforge`, copia `.env.example` a `.env` y prueba los proveedores.
 
 Luego pon en `.env` al menos una clave gratis (por ejemplo `GEMINI_API_KEY`) o inicia sesión en tus CLIs (ver **Modelos**).
 
-```bash
-# Generar un proyecto (hace preguntas primero; --sin-preguntas para saltarlas)
-python -m specforge generar "agenda de citas para un consultorio odontológico" --verificar --reparar
+La forma más fácil: escribe **`specforge`** sin nada más y te sale un menú:
 
-# Arreglar un repositorio cuyas pruebas fallan
-python -m specforge reparar ../mi-proyecto --prueba "pytest -q"
-python -m specforge reparar ../mi-web --prueba "npm test" --intentos 4
-
-# Ver qué proveedores de IA responden
-python -m specforge diagnostico
+```
+SpecForge — ¿qué quieres hacer?
+  1) Generar un proyecto desde una idea
+  2) Reparar un proyecto cuyas pruebas fallan
+  3) Ver qué proveedores de IA responden
+  0) Salir
 ```
 
-En Windows también puedes usar `specforge.bat generar "…"` desde cualquier carpeta.
+(En Windows: `specforge.bat`, o activa el entorno con `.venv\Scripts\activate` y escribe `specforge`. En Linux/macOS: `source .venv/bin/activate`.)
+
+Con comandos directos:
+
+```bash
+# Generar un proyecto (hace preguntas primero; --sin-preguntas para saltarlas)
+specforge generar "agenda de citas para un consultorio odontológico" --verificar --reparar
+
+# Arreglar un repositorio cuyas pruebas fallan
+specforge reparar ../mi-proyecto --prueba "pytest -q"
+specforge reparar ../mi-web --prueba "npm test" --intentos 4
+
+# Ver qué proveedores de IA responden
+specforge diagnostico
+```
+
 
 ---
 
@@ -159,7 +172,7 @@ Modo actual: SPECFORGE_MODO=auto
 ```
 SpecForge/
 ├── specforge/
-│   ├── __main__.py      # CLI: generar · reparar · diagnostico
+│   ├── __main__.py      # CLI: menú interactivo · generar · reparar · diagnostico
 │   ├── generar.py       # proceso de especificación → tareas → código en olas
 │   ├── reparar.py       # reproducir → localizar → parche → validar (en rama git)
 │   ├── artefactos.py    # requisitos, diseño y plan: validación y Markdown
@@ -172,7 +185,7 @@ SpecForge/
 ├── memory/engram.py     # memoria SQLite FTS5 (decisiones y arreglos)
 ├── skills/              # guías por tecnología que se inyectan en el diseño
 ├── core/config.py       # niveles, cadenas y modos
-└── tests/               # 85 pruebas (pytest)
+└── tests/               # 92 pruebas (pytest)
 ```
 
 ## Pruebas

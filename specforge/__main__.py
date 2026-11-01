@@ -4,6 +4,7 @@ SpecForge — línea de comandos
   python -m specforge generar "app de citas para un consultorio" [--nombre citas] [--sin-preguntas] [--verificar] [--reparar]
   python -m specforge reparar RUTA --prueba "pytest -q" [--intentos 3]
   python -m specforge diagnostico
+  python -m specforge                 (sin nada: menú interactivo)
 """
 
 from __future__ import annotations
@@ -60,7 +61,36 @@ def _diagnostico(_: argparse.Namespace) -> int:
     return asyncio.run(main())
 
 
+def menu(entrada=input) -> list[str]:
+    """Menú para quien no recuerda los comandos: arma los argumentos preguntando."""
+    print("SpecForge — ¿qué quieres hacer?\n"
+          "  1) Generar un proyecto desde una idea\n"
+          "  2) Reparar un proyecto cuyas pruebas fallan\n"
+          "  3) Ver qué proveedores de IA responden\n"
+          "  0) Salir")
+    opcion = entrada("Opción: ").strip()
+    if opcion == "1":
+        idea = entrada("Describe la idea: ").strip()
+        if not idea:
+            return []
+        args = ["generar", idea]
+        if entrada("¿Correr las pruebas al terminar y reparar si fallan? [s/N]: ").strip().lower().startswith("s"):
+            args.append("--reparar")
+        return args
+    if opcion == "2":
+        ruta = entrada("Carpeta del proyecto (repositorio git) [.]: ").strip() or "."
+        prueba = entrada('Comando de pruebas (ej. "pytest -q" o "npm test"): ').strip()
+        return ["reparar", ruta, "--prueba", prueba] if prueba else []
+    if opcion == "3":
+        return ["diagnostico"]
+    return []
+
+
 def main(argv: list[str] | None = None) -> int:
+    if argv is None and len(sys.argv) == 1:
+        argv = menu()
+        if not argv:
+            return 0
     p = argparse.ArgumentParser(prog="specforge", description="De la idea al código con especificaciones primero, y reparación validada con pruebas.")
     sub = p.add_subparsers(dest="comando", required=True)
 

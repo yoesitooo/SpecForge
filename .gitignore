@@ -97,3 +97,5 @@ AgentHub/logs/
 # ── NOTAS PERSONALES / MEMORIA DIARIA ─────────────────────────────────────────
 MEMORY.md
 memory/*.md
+.egg-info/
+*.egg-info/
