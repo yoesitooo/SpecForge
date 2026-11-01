@@ -32,42 +32,19 @@ def _optional(var: str, default: str = "") -> str:
 
 
 # =============================================================================
-# ANTHROPIC / CLAUDE — Se usa vía CLI (claude --print), no API directa.
-# ANTHROPIC_API_KEY es opcional. Si no está, ClaudeProvider usa el CLI.
+# PROVEEDORES DE MODELOS
+# Las claves se leen directamente en providers/openai_compat.py (GEMINI_API_KEY,
+# GROQ_API_KEY, CEREBRAS_API_KEY, OPENROUTER_API_KEY, GITHUB_MODELS_TOKEN,
+# NVIDIA_API_KEY). Todas son opcionales: basta con una. Ver .env.example.
+# GROQ_API_KEY también la usa Jarvis para la voz (Whisper).
 # =============================================================================
-ANTHROPIC_API_KEY      = _optional("ANTHROPIC_API_KEY")   # opcional — usamos CLI Pro
-CLAUDE_DEFAULT_MODEL   = _optional("CLAUDE_DEFAULT_MODEL", "claude-sonnet-4-6")
-CLAUDE_HEAVY_MODEL     = _optional("CLAUDE_HEAVY_MODEL",   "claude-opus-4-7")
-CLAUDE_FAST_MODEL      = _optional("CLAUDE_FAST_MODEL",    "claude-haiku-4-5-20251001")
-
-
-# =============================================================================
-# GROQ — Inferencia gratuita ultrarrápida
-# =============================================================================
-GROQ_API_KEY           = _require("GROQ_API_KEY")
-GROQ_BASE_URL          = "https://api.groq.com/openai/v1"
-GROQ_DEFAULT_MODEL     = _optional("GROQ_DEFAULT_MODEL",   "llama-3.3-70b-versatile")
-GROQ_FAST_MODEL        = _optional("GROQ_FAST_MODEL",      "llama-3.1-8b-instant")
-GROQ_VISION_MODEL      = _optional("GROQ_VISION_MODEL",    "llama-3.2-11b-vision-preview")
-GROQ_LONG_CTX_MODEL    = _optional("GROQ_LONG_CTX_MODEL",  "mixtral-8x7b-32768")
-
-
-# =============================================================================
-# NVIDIA NIM — Modelos pesados
-# =============================================================================
-NVIDIA_HEAVY_KEY       = _optional("NVIDIA_HEAVY_KEY")
-NVIDIA_FAST_KEY        = _optional("NVIDIA_FAST_KEY")
-NVIDIA_VISION_KEY      = _optional("NVIDIA_VISION_KEY")
-NVIDIA_BASE_URL        = "https://integrate.api.nvidia.com/v1"
-NVIDIA_DEFAULT_MODEL   = _optional("NVIDIA_DEFAULT_MODEL",  "meta/llama-3.1-70b-instruct")
-NVIDIA_CODE_MODEL      = _optional("NVIDIA_CODE_MODEL",     "qwen/qwen2.5-coder-32b-instruct")
-NVIDIA_VISION_MODEL    = _optional("NVIDIA_VISION_MODEL",   "meta/llama-3.2-11b-vision-instruct")
+GROQ_API_KEY = _optional("GROQ_API_KEY")
 
 
 # =============================================================================
 # TELEGRAM
 # =============================================================================
-TELEGRAM_TOKEN          = _require("TELEGRAM_TOKEN")
+TELEGRAM_TOKEN          = _optional("TELEGRAM_TOKEN")   # solo se exige con TRANSPORT_MODE=telegram (ver main.py)
 TELEGRAM_ALLOWED_CHAT_ID = _optional("TELEGRAM_ALLOWED_CHAT_ID")
 
 
@@ -86,41 +63,64 @@ SKILLS_DIR        = ROOT_DIR / "skills"
 
 
 # =============================================================================
-# TABLA DE MODELOS POR AGENTE DEL DAG
-# Aquí se decide qué provider + modelo usa cada agente.
-# Cambiar el modelo de un agente = cambiar UNA línea aquí.
+# CADENAS DE PROVEEDORES (con respaldo automático)
+# Cada agente pide un "nivel" (tier). Cada nivel es una lista ordenada de
+# "proveedor:modelo". El router usa el primero que tenga credenciales y, si
+# falla (límite de uso 429, caída, modelo retirado...), pasa al siguiente.
+#
+#   - claude / antigravity → tus SUSCRIPCIONES vía CLI (Claude Pro, cuenta de
+#     Google / Google AI Pro). Se saltan solas si el CLI no está instalado.
+#   - gemini, groq, cerebras, openrouter, github, nvidia → APIs con plan gratis.
+#
+# Se puede reemplazar cualquier nivel desde .env, por ejemplo:
+#   SDD_CHAIN_SMART=gemini:gemini-3.8-flash,cerebras:gpt-oss-120b
+# Un modelo vacío ("antigravity:") usa el modelo por defecto del CLI.
+# =============================================================================
+DEFAULT_CHAINS: dict[str, str] = {
+    # Razonamiento: discovery, requisitos, arquitectura, revisión de código
+    "smart":  "claude:sonnet,antigravity:,gemini:gemini-3.8-flash,"
+              "groq:openai/gpt-oss-120b,groq:llama-3.3-70b-versatile",
+    # Generación de código: frontend y backend
+    "code":   "claude:sonnet,antigravity:,gemini:gemini-3.8-flash,groq:openai/gpt-oss-120b",
+    # Tareas estructuradas y rápidas: historias de usuario, spec, BD, QA
+    "fast":   "gemini:gemini-3.5-flash-lite,groq:llama-3.1-8b-instant,"
+              "groq:openai/gpt-oss-20b,antigravity:",
+    # Entrada con imágenes: UX/UI
+    "vision": "gemini:gemini-3.8-flash,nvidia:meta/llama-3.2-11b-vision-instruct",
+}
+
+
+def parse_chain(spec: str) -> list[tuple[str, str]]:
+    """'gemini:gemini-3.8-flash, groq:x' → [("gemini", "gemini-3.8-flash"), ("groq", "x")]"""
+    chain = []
+    for item in spec.split(","):
+        item = item.strip()
+        if not item:
+            continue
+        provider, _, model = item.partition(":")
+        chain.append((provider.strip(), model.strip()))
+    return chain
+
+
+def chain_for(tier: str) -> list[tuple[str, str]]:
+    spec = _optional(f"SDD_CHAIN_{tier.upper()}") or DEFAULT_CHAINS[tier]
+    return parse_chain(spec)
+
+
+# =============================================================================
+# NIVEL Y TEMPERATURA POR AGENTE DEL DAG
+# Cambiar el modelo de un agente = cambiar su nivel aquí o la cadena en .env.
 # =============================================================================
 AGENT_MODELS: dict[str, dict] = {
-    # Fase 1 — Discovery (conversacional, necesita inteligencia)
-    "discovery":        {"provider": "groq",      "model": GROQ_DEFAULT_MODEL,   "temperature": 0.8},
-
-    # Fase 2 — Requirements (estructurado, PRD)
-    "requirements":     {"provider": "groq",      "model": GROQ_DEFAULT_MODEL,   "temperature": 0.4},
-
-    # Fase 3 — Architecture (contexto largo para ADRs)
-    "architecture":     {"provider": "claude",    "model": CLAUDE_DEFAULT_MODEL, "temperature": 0.2},
-
-    # Fase 4a — UX/UI (necesita visión)
-    "ux_ui":            {"provider": "groq",      "model": GROQ_VISION_MODEL,    "temperature": 0.5},
-
-    # Fase 4b — HU Writer (formato rígido Gherkin)
-    "hu_writer":        {"provider": "groq",      "model": GROQ_FAST_MODEL,      "temperature": 0.15},
-
-    # Fase 5 — Tech Spec (máxima estructura, tareas atómicas)
-    "tech_spec":        {"provider": "groq",      "model": GROQ_FAST_MODEL,      "temperature": 0.05},
-
-    # Fase 6a — Frontend (código React/TS)
-    "frontend":         {"provider": "nvidia",    "model": NVIDIA_CODE_MODEL,    "temperature": 0.1},
-
-    # Fase 6b — Backend (APIs complejas, necesita el modelo grande)
-    "backend":          {"provider": "claude",    "model": CLAUDE_DEFAULT_MODEL, "temperature": 0.1},
-
-    # Fase 6c — DB (schema SQL, muy determinístico)
-    "db":               {"provider": "groq",      "model": GROQ_FAST_MODEL,      "temperature": 0.05},
-
-    # Fase 7a — QA (tests según criterios de HU)
-    "qa":               {"provider": "groq",      "model": "gemma2-9b-it",       "temperature": 0.1},
-
-    # Fase 7b — Code Review (Sonnet es suficiente para auditoría; Opus gasta rate limits 5x más rápido)
-    "code_review":      {"provider": "claude",    "model": CLAUDE_DEFAULT_MODEL, "temperature": 0.1},
+    "discovery":    {"tier": "smart",  "temperature": 0.8},   # Fase 1 — conversacional
+    "requirements": {"tier": "smart",  "temperature": 0.4},   # Fase 2 — PRD
+    "architecture": {"tier": "smart",  "temperature": 0.2},   # Fase 3 — ADRs
+    "ux_ui":        {"tier": "vision", "temperature": 0.5},   # Fase 4a — necesita visión
+    "hu_writer":    {"tier": "fast",   "temperature": 0.15},  # Fase 4b — Gherkin
+    "tech_spec":    {"tier": "fast",   "temperature": 0.05},  # Fase 5 — tareas atómicas
+    "frontend":     {"tier": "code",   "temperature": 0.1},   # Fase 6a
+    "backend":      {"tier": "code",   "temperature": 0.1},   # Fase 6b
+    "db":           {"tier": "fast",   "temperature": 0.05},  # Fase 6c — SQL
+    "qa":           {"tier": "fast",   "temperature": 0.1},   # Fase 7a
+    "code_review":  {"tier": "smart",  "temperature": 0.1},   # Fase 7b
 }

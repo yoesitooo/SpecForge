@@ -9,7 +9,8 @@
 > | Design point | Where to look |
 > |---|---|
 > | The DAG is **pure data**; the executor reads it, and phases in the same group run in parallel with `asyncio.gather` (phases 4, 6 and 7) | [`orchestrator/dag.py`](./orchestrator/dag.py) · [`orchestrator/executor.py`](./orchestrator/executor.py) |
-> | **Multi-provider router** — each phase is sent to the model that fits it (Groq / NVIDIA NIM / Claude) behind one `BaseProvider` interface | [`providers/`](./providers) |
+> | **Multi-provider router with automatic fallback** — each phase asks for a tier; the router walks a chain of providers and moves on when one is missing a key, hits its free-tier limit (429) or fails. Runs on free tiers only (Gemini, Groq, Cerebras, OpenRouter, GitHub Models, NVIDIA) or on personal subscriptions through their CLIs (Antigravity CLI for Google AI Pro, Claude Code) | [`providers/`](./providers) · [`core/config.py`](./core/config.py) |
+> | **Tested** with pytest (HTTP and CLIs mocked) in GitHub Actions | [`tests/`](./tests) |
 > | **Persistent memory** in SQLite FTS5: decisions, errors and DAG state survive restarts; any phase can be rolled back | [`memory/engram.py`](./memory/engram.py) |
 > | Pluggable **transports**: terminal, Telegram bot, voice (Whisper + TTS) and web (FastAPI + WebSockets) | [`transports/`](./transports) |
 > | Prompt **skills** as Markdown files loaded on demand | [`skills/`](./skills) |
@@ -34,7 +35,7 @@ cd SDD-Ecosystem-core
 pip install -r requirements.txt
 ```
 
-### 2. Configurar claves
+### 2. Configurar una clave (gratis)
 
 ```bash
 # Windows
@@ -44,7 +45,7 @@ copy .env.example .env
 cp .env.example .env
 ```
 
-Abre `.env` y rellena tus claves. Ver la sección **Obtener claves** más abajo.
+Abre `.env` y pon al menos una clave gratis, por ejemplo `GEMINI_API_KEY` (ver **Modelos: gratis primero** más abajo).
 
 ### 3. Verificar instalación
 
@@ -52,7 +53,7 @@ Abre `.env` y rellena tus claves. Ver la sección **Obtener claves** más abajo.
 python test_system.py
 ```
 
-Debe mostrar `33/33 checks pasaron`. Si alguno falla, la sección **Solución de problemas** tiene el fix.
+Muestra qué dependencias y proveedores quedaron listos (basta con un proveedor). Si algo falla, la sección **Solución de problemas** tiene el arreglo.
 
 ### 4. Arrancar
 
@@ -74,68 +75,48 @@ TRANSPORT_MODE=telegram python main.py   # telegram
 
 ---
 
-## Obtener las claves
+## Modelos: gratis primero
 
-### GROQ_API_KEY — Gratis, obligatoria
+No hace falta pagar nada para usarlo: **basta con una clave gratis** (recomendado: Gemini). Cada agente pide un *nivel* y el router recorre una cadena de proveedores; si uno no tiene clave, llega a su límite gratis (HTTP 429) o se cae, pasa solo al siguiente.
 
-Groq es el LLM principal del sistema (velocidad, costo cero). También procesa la voz con Whisper.
+| Proveedor | Cómo se usa | Costo | Para qué sirve mejor |
+|---|---|---|---|
+| **Gemini** (Google AI Studio) | `GEMINI_API_KEY` — [aistudio.google.com/apikey](https://aistudio.google.com/apikey) | Plan gratis, sin tarjeta (modelos Flash y Flash-Lite) | Opción por defecto; contexto largo; acepta imágenes |
+| **Groq** | `GROQ_API_KEY` — [console.groq.com/keys](https://console.groq.com/keys) | Plan gratis | Respuestas muy rápidas; Jarvis lo usa para la voz (Whisper) |
+| **Cerebras** | `CEREBRAS_API_KEY` | Plan gratis | Mucho volumen por día |
+| **OpenRouter** | `OPENROUTER_API_KEY` | Modelos `:free` | Muchos modelos con una sola clave |
+| **GitHub Models** | `GITHUB_MODELS_TOKEN` | Gratis con cuenta de GitHub | Probar modelos de distintos laboratorios |
+| **NVIDIA NIM** | `NVIDIA_API_KEY` | Créditos gratis | Modelos de código y visión |
+| **Antigravity CLI** (`agy`) | Iniciar sesión una vez con `agy` | Cuenta de Google gratis; límites más altos con **Google AI Pro/Ultra** | Usar tu suscripción de Google en vez de pagar por tokens |
+| **Claude Code CLI** (`claude`) | Iniciar sesión una vez con `claude` | Plan Claude Pro/Max | Usar tu suscripción de Claude |
 
-1. Ir a [console.groq.com](https://console.groq.com)
-2. Crear cuenta (gratis)
-3. Ir a **API Keys** → **Create API Key**
-4. Copiar la clave (empieza con `gsk_...`)
-5. Pegarla en `.env`: `GROQ_API_KEY=gsk_...`
+**Sobre la cuenta de Google AI Pro:** la suscripción **no** aumenta los límites de la API de Gemini (eso va por Google AI Studio), pero sí da límites más altos en el CLI de Google. Desde junio de 2026 ese CLI es **Antigravity CLI** (`agy`), que reemplazó a Gemini CLI para cuentas personales. El proveedor `antigravity` lo ejecuta en modo *headless* (`agy -p`, salida JSON), sin shell y sin permisos para editar archivos. Las suscripciones son para uso personal; para un servicio con usuarios usa las APIs.
 
-**Límites gratuitos:** 30 requests/min, 6000 tokens/min — suficiente para uso normal.
+**Cadenas por defecto** (ver [`core/config.py`](./core/config.py)):
 
----
+| Nivel | Fases | Cadena |
+|---|---|---|
+| `smart` | discovery, requirements, architecture, code_review | claude → antigravity → gemini-3.8-flash → groq gpt-oss-120b → groq llama-3.3-70b |
+| `code` | frontend, backend | claude → antigravity → gemini-3.8-flash → groq gpt-oss-120b |
+| `fast` | hu_writer, tech_spec, db, qa | gemini-3.5-flash-lite → groq llama-3.1-8b → groq gpt-oss-20b → antigravity |
+| `vision` | ux_ui | gemini-3.8-flash → NVIDIA llama-3.2-11b-vision |
 
-### NVIDIA_HEAVY_KEY — Gratis, obligatoria
-
-NVIDIA NIM da acceso a modelos de código especializados (qwen2.5-coder-32b) sin costo.
-
-1. Ir a [integrate.api.nvidia.com](https://integrate.api.nvidia.com)
-2. Crear cuenta con email
-3. Ir a **API Keys** → **Generate API Key**
-4. Copiar la clave (empieza con `nvapi-...`)
-5. Pegarla en `.env`: `NVIDIA_HEAVY_KEY=nvapi-...`
-
----
-
-### TELEGRAM_TOKEN — Gratis, solo si usas Telegram
-
-Si no vas a usar Telegram, puedes dejarlo en blanco y usar el modo terminal o voz.
-
-**Pasos para crear el bot:**
-
-1. Abrir Telegram y buscar **@BotFather**
-2. Escribir `/newbot`
-3. BotFather pide un **nombre para mostrar** — puede ser cualquier cosa, ej: `Mi Jarvis`
-4. BotFather pide un **username** — debe terminar en `bot`, ej: `mi_jarvis_bot`
-5. BotFather responde con el token: `1234567890:AAHxxxxxxxxxxxx...`
-6. Copiar ese token en `.env`: `TELEGRAM_TOKEN=1234567890:AAH...`
-
-**Obtener tu TELEGRAM_ALLOWED_CHAT_ID** (tu ID personal para que el bot solo te responda a ti):
-
-1. Buscar **@userinfobot** en Telegram
-2. Escribirle cualquier mensaje
-3. Responde con tu ID: `Id: 123456789`
-4. Copiar ese número en `.env`: `TELEGRAM_ALLOWED_CHAT_ID=123456789`
-
-> Si dejas `TELEGRAM_ALLOWED_CHAT_ID` vacío el bot responde a cualquiera que le escriba.
-
----
-
-### ANTHROPIC_API_KEY — Opcional
-
-El sistema usa Claude a través de la **CLI de Claude** (suscripción Pro), no por API directa. Si tienes suscripción Pro de Claude:
+Los proveedores sin clave (o sin el CLI instalado) se saltan. Cualquier nivel se cambia desde `.env`, por ejemplo:
 
 ```bash
-npm install -g @anthropic-ai/claude-code
-claude auth login
+SDD_CHAIN_SMART=antigravity:,gemini:gemini-3.8-flash,cerebras:gpt-oss-120b
 ```
 
-Si no tienes suscripción Pro, el sistema funciona igual usando Groq y NVIDIA para todas las fases.
+`python test_system.py` muestra qué proveedores quedaron listos.
+
+### TELEGRAM_TOKEN — solo si usas Telegram
+
+1. En Telegram, busca **@BotFather** y escribe `/newbot`.
+2. Elige un nombre y un usuario que termine en `bot`; BotFather te da el token.
+3. Pégalo en `.env`: `TELEGRAM_TOKEN=...`
+4. Para que el bot solo te responda a ti, escríbele a **@userinfobot**, copia tu ID y ponlo en `TELEGRAM_ALLOWED_CHAT_ID`.
+
+> Si dejas `TELEGRAM_ALLOWED_CHAT_ID` vacío, el bot responde a cualquiera que le escriba.
 
 ---
 
@@ -246,7 +227,8 @@ npm run dev    # → http://localhost:3000
 SDD-Ecosystem/
 ├── agents/           # 11 agentes DAG + Jarvis assistant + smart discovery
 ├── orchestrator/     # Motor DAG: executor, dag, circuit breaker, autopilot
-├── providers/        # Abstracción de LLMs: Groq, Claude CLI, NVIDIA NIM
+├── providers/        # Router con respaldo + APIs OpenAI-compatibles + CLIs de suscripción
+├── tests/            # Pruebas (pytest) del router, proveedores, configuración y DAG
 ├── transports/       # Telegram, voz, HTTP, CLI
 ├── tools/
 │   ├── voice/        # Micrófono, TTS (Edge-TTS), wake word
@@ -300,14 +282,14 @@ JARVIS_RATE=+10%                    # Velocidad
 | Problema | Solución |
 |----------|----------|
 | `ModuleNotFoundError` | `pip install -r requirements.txt` |
-| `GROQ_API_KEY not set` | Verificar que `.env` existe y tiene la clave |
+| `Ningún proveedor pudo responder` | Agrega al menos una clave gratis (por ejemplo `GEMINI_API_KEY`) en `.env`; el mensaje lista el motivo de cada proveedor |
 | El bot de Telegram no responde | Verificar `TELEGRAM_TOKEN` y `TELEGRAM_ALLOWED_CHAT_ID` en `.env` |
 | Jarvis no escucha el micrófono | Windows → Configuración → Privacidad → Micrófono → Permitir acceso |
 | Wake word no funciona bien | Hablar más despacio; el sistema se calibra al iniciar (2 segundos) |
-| Error 400 de Groq | Reiniciar — puede ser rate limit momentáneo |
+| Error 429 (límite gratis) | El router pasa solo al siguiente proveedor; agrega otra clave gratis para tener más respaldo |
 | `npm: command not found` | Instalar [Node.js 20+](https://nodejs.org) para proyectos web |
 | Error de Edge-TTS (socket) | Problema de red momentáneo, se recupera solo al siguiente turno |
-| Claude CLI no funciona | `npm i -g @anthropic-ai/claude-code` → `claude auth login` |
+| `agy` o `claude` fallan | Abre el CLI una vez de forma interactiva para iniciar sesión; si no, el router los salta |
 
 ---
 
@@ -315,7 +297,7 @@ JARVIS_RATE=+10%                    # Velocidad
 
 - **Python 3.12+**
 - **Node.js 20+** — solo para ejecutar proyectos web generados
-- **Claude CLI** — opcional, para fases que usan Claude. `npm i -g @anthropic-ai/claude-code`
+- **Antigravity CLI / Claude Code CLI** — opcionales, para usar una suscripción en vez de claves de API
 - **Micrófono** — solo para modo voz
 - Windows 10/11 (los `.bat` son para Windows; en Linux/Mac usar los comandos directos)
 
@@ -337,10 +319,7 @@ Discovery → Requirements → Architecture
                      QA ──┬── Code Review       (paralelo)
 ```
 
-Cada fase usa el modelo más adecuado:
-- **Discovery, Requirements** → Groq llama-3.3-70b (velocidad, gratis)
-- **Architecture, Code Review** → Claude Sonnet via CLI (razonamiento profundo)
-- **Frontend, Backend, DB** → NVIDIA qwen2.5-coder-32b (código especializado, gratis)
+Cada fase pide un nivel de modelo (`smart`, `code`, `fast`, `vision`) y el router elige el primer proveedor disponible de esa cadena, con respaldo automático (ver **Modelos: gratis primero**).
 
 ### Memoria del sistema
 - **Engram** (SQLite FTS5): decisiones, errores y contexto institucional por proyecto
@@ -352,6 +331,17 @@ Cada fase usa el modelo más adecuado:
 Un agente único para generar un proyecto completo tiene limitaciones reales: el contexto de un LLM no alcanza para todo un proyecto, no hay especialización, y todo es secuencial.
 
 El DAG resuelve esto: cada agente tiene una responsabilidad acotada, usa el modelo correcto para su tarea, y las fases independientes corren en paralelo. El resultado es código de mayor calidad en menos tiempo.
+
+---
+
+## Pruebas
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest -q tests
+```
+
+Las pruebas no llaman a ningún modelo: simulan las respuestas HTTP y los CLIs para verificar el formato de las peticiones, el respaldo entre proveedores (límite 429, errores, credenciales faltantes), la lectura de la salida JSON de `agy` y la estructura del DAG. Corren en GitHub Actions en cada push.
 
 ---
 

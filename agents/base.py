@@ -3,7 +3,7 @@ BaseAgent — Contrato que todos los agentes implementan.
 
 Ciclo de vida de un agente:
   1. NACIMIENTO  — el orquestador lo instancia con el contexto del proyecto
-  2. EJECUCIÓN   — build_prompt() + provider.complete()
+  2. EJECUCIÓN   — build_prompt() + router.call_chain() (con respaldo entre proveedores)
   3. REPORTE     — el output se guarda en Engram y en session_store
   4. MUERTE      — el objeto no persiste entre llamadas
 
@@ -18,7 +18,7 @@ from providers.base import LLMResponse
 from providers import router as llm
 from memory import engram
 from skills import registry as skills
-from core.config import AGENT_MODELS
+from core.config import AGENT_MODELS, chain_for
 
 
 @dataclass
@@ -55,10 +55,9 @@ class BaseAgent(ABC):
         ...
 
     async def run(self, ctx: AgentContext) -> AgentOutput:
-        cfg = AGENT_MODELS[self.phase]
-        provider = cfg["provider"]
-        model    = cfg["model"]
-        temp     = cfg["temperature"]
+        cfg   = AGENT_MODELS[self.phase]
+        chain = chain_for(cfg["tier"])
+        temp  = cfg["temperature"]
 
         system = self.system_prompt()
         user   = self.build_prompt(ctx)
@@ -73,9 +72,8 @@ class BaseAgent(ABC):
         if "No hay memoria" not in memory_ctx:
             user = f"{memory_ctx}\n\n---\n\n{user}"
 
-        response: LLMResponse = await llm.call(
-            provider_name=provider,
-            model=model,
+        response: LLMResponse = await llm.call_chain(
+            chain,
             system=system,
             user=user,
             temperature=temp,

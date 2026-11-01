@@ -45,26 +45,28 @@ check("edge-tts",         pkg("edge_tts"))
 check("pygame",           pkg("pygame"))
 check("rich",             pkg("rich"))
 
-# ── 2. Config & keys ──────────────────────────────────────────────────────────
-print("\n=== CLAVES Y CONFIG ===")
+# ── 2. Config ─────────────────────────────────────────────────────────────────
+print("\n=== CONFIG ===")
 try:
-    from core.config import (
-        GROQ_API_KEY, TELEGRAM_TOKEN, TELEGRAM_ALLOWED_CHAT_ID,
-        NVIDIA_HEAVY_KEY, CLAUDE_DEFAULT_MODEL, ENGRAM_DB_PATH
-    )
-    check("GROQ_API_KEY",      bool(GROQ_API_KEY),      GROQ_API_KEY[:12]+"...")
-    check("TELEGRAM_TOKEN",    bool(TELEGRAM_TOKEN),    TELEGRAM_TOKEN[:20]+"...")
-    check("NVIDIA_HEAVY_KEY",  bool(NVIDIA_HEAVY_KEY),  NVIDIA_HEAVY_KEY[:12]+"...")
-    check("CLAUDE_DEFAULT_MODEL", bool(CLAUDE_DEFAULT_MODEL), CLAUDE_DEFAULT_MODEL)
-    check("ENGRAM_DB_PATH",    bool(ENGRAM_DB_PATH),    ENGRAM_DB_PATH)
+    from core.config import ENGRAM_DB_PATH, AGENT_MODELS, chain_for
+    check("core.config", True)
+    check("ENGRAM_DB_PATH", bool(ENGRAM_DB_PATH), ENGRAM_DB_PATH)
+    check("Cadenas de proveedores", all(chain_for(c["tier"]) for c in AGENT_MODELS.values()))
 except Exception as e:
     check("core.config", False, str(e))
 
-# ── 3. Claude CLI ─────────────────────────────────────────────────────────────
-print("\n=== CLAUDE CLI ===")
-import shutil
-claude_ok = shutil.which("claude") is not None
-check("claude en PATH", claude_ok, "claude auth login si falla")
+# ── 3. Proveedores (sin llamadas reales) ──────────────────────────────────────
+print("\n=== PROVEEDORES (basta con uno) ===")
+try:
+    from providers.router import PROVEEDORES, _get_provider
+    disponibles = [p for p in PROVEEDORES if _get_provider(p).is_available()]
+    for p in PROVEEDORES:
+        estado = "listo" if p in disponibles else "sin configurar"
+        print(f"  {PASS if p in disponibles else WARN} {p}: {estado}")
+    check("Al menos un proveedor", bool(disponibles),
+          ", ".join(disponibles) or "agrega GEMINI_API_KEY (gratis) a .env")
+except Exception as e:
+    check("Proveedores", False, str(e))
 
 # ── 4. Memory layer ───────────────────────────────────────────────────────────
 print("\n=== MEMORIA ===")
@@ -90,18 +92,6 @@ try:
     check("next_phase lógica",   next_phase("code_review") is None)
 except Exception as e:
     check("DAG", False, str(e))
-
-# ── 6. Providers (sin hacer llamadas reales) ──────────────────────────────────
-print("\n=== PROVIDERS ===")
-try:
-    from providers.groq_provider import GroqProvider
-    from providers.nvidia_provider import NvidiaProvider
-    from providers.claude_provider import ClaudeProvider
-    check("Groq provider",   GroqProvider().is_available(),   "key OK")
-    check("NVIDIA provider", NvidiaProvider().is_available(), "keys OK")
-    check("Claude provider", ClaudeProvider().is_available(), "CLI en PATH")
-except Exception as e:
-    check("Providers", False, str(e))
 
 # ── 7. HTTP transport ─────────────────────────────────────────────────────────
 print("\n=== HTTP TRANSPORT ===")

@@ -18,7 +18,8 @@ Estados por chat_id:
 import logging
 import re
 
-from core.config import GROQ_API_KEY
+from core.config import chain_for
+from providers import router as llm
 from agents.project_templates import detect_type, get_template, TYPE_LABELS
 
 log = logging.getLogger(__name__)
@@ -130,15 +131,20 @@ async def _finalize(chat_id: str) -> str:
         return f"Listo el brief para '{name}'. Usa /new {name} para arrancarlo.\n\n{brief[:300]}..."
 
 
+async def _preguntar(prompt: str, tier: str, max_tokens: int, temperature: float) -> str:
+    """Una pregunta corta al modelo, usando la cadena de proveedores con respaldo."""
+    r = await llm.call_chain(
+        chain_for(tier), system="", user=prompt, temperature=temperature, max_tokens=max_tokens
+    )
+    return r.content or ""
+
+
 async def _generate_questions(description: str, template: dict) -> list[str]:
     """
-    Usa Groq para generar preguntas específicas basadas en la descripción.
+    Usa el modelo (cadena "smart") para generar preguntas específicas basadas en la descripción.
     Si falla, usa las preguntas del template.
     """
     try:
-        from groq import AsyncGroq
-        client = AsyncGroq(api_key=GROQ_API_KEY)
-
         prompt = f"""El usuario quiere construir esto: "{description}"
 Tipo detectado: {template['label']}
 Stack sugerido: {template['tech_stack']}
@@ -148,14 +154,7 @@ Las preguntas deben ser específicas para ESTA descripción, no genéricas.
 Cada pregunta en una línea. Solo las preguntas, sin numeración ni explicaciones.
 No preguntes cosas que ya se mencionaron en la descripción."""
 
-        response = await client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=200,
-            temperature=0.3,
-        )
-
-        raw = response.choices[0].message.content or ""
+        raw = await _preguntar(prompt, "smart", max_tokens=200, temperature=0.3)
         questions = [
             q.strip().lstrip("0123456789.-) ")
             for q in raw.strip().splitlines()
@@ -179,9 +178,6 @@ async def _build_brief(description: str, project_type: str, answers: list[dict])
     )
 
     try:
-        from groq import AsyncGroq
-        client = AsyncGroq(api_key=GROQ_API_KEY)
-
         prompt = f"""Construye un brief técnico completo para el siguiente proyecto.
 
 Descripción: {description}
@@ -201,14 +197,8 @@ El brief debe incluir (en texto plano, sin markdown excesivo):
 
 Sé específico y técnico. Este brief lo usan agentes de IA para generar el código."""
 
-        response = await client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=600,
-            temperature=0.2,
-        )
-
-        return response.choices[0].message.content or _fallback_brief(description, template, answers)
+        brief = await _preguntar(prompt, "smart", max_tokens=600, temperature=0.2)
+        return brief or _fallback_brief(description, template, answers)
 
     except Exception as e:
         log.warning(f"[DISCOVERY] Error generando brief: {e}")
@@ -226,19 +216,11 @@ def _fallback_brief(description: str, template: dict, answers: list[dict]) -> st
 async def _generate_name(description: str, project_type: str = "") -> str:
     """Genera un nombre corto para el proyecto."""
     try:
-        from groq import AsyncGroq
-        client = AsyncGroq(api_key=GROQ_API_KEY)
-
-        response = await client.chat.completions.create(
-            model="llama-3.1-8b-instant",
-            messages=[{
-                "role": "user",
-                "content": f"Genera un nombre corto (1-3 palabras, sin espacios, PascalCase) para este proyecto tipo {project_type or 'web'}: {description}. Solo el nombre, nada más."
-            }],
-            max_tokens=20,
-            temperature=0.5,
+        raw = await _preguntar(
+            f"Genera un nombre corto (1-3 palabras, sin espacios, PascalCase) para este proyecto "
+            f"tipo {project_type or 'web'}: {description}. Solo el nombre, nada más.",
+            "fast", max_tokens=20, temperature=0.5,
         )
-        raw = response.choices[0].message.content or ""
         name = re.sub(r"[^a-zA-Z0-9]", "", raw.strip().split()[0]) if raw.strip() else "MiProyecto"
         return name or "MiProyecto"
     except Exception:
